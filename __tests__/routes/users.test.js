@@ -1,6 +1,6 @@
 const request = require('supertest')
 const app = require('../../app')
-const { db, client } = require('../../services/database');
+const {db, client} = require('../../services/database');
 
 describe('Get Users', () => {
     beforeEach(async () => {
@@ -12,7 +12,7 @@ describe('Get Users', () => {
     });
 
     it('should get all users in array', async () => {
-        const expected = { 'foo': 'bar' };
+        const expected = {'foo': 'bar'};
         await db.collection('users').insertOne(expected);
         delete expected._id;
 

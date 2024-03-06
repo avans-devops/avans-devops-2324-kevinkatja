@@ -1,0 +1,28 @@
+version: '1'
+
+services:
+  database:
+    image: mongo
+    container_name: mydatabase
+    command: --auth
+    restart: always
+    environment:
+      - MONGO_INITDB_ROOT_USERNAME=root
+      - MONGO_INITDB_ROOT_PASSWORD=example
+    volumes:
+      - ./data:/data/db
+    expose:
+      - "27017"
+
+  web:
+    build:
+      context: .
+      dockerfile: dockerfile
+    ports:
+      - "3000:3000"
+    environment:
+      - MONGO_URL=mongodb://root:example@mydatabase:27017/
+    depends_on:
+      - database
+
+

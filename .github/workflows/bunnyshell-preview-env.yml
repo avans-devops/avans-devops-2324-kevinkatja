@@ -1,0 +1,31 @@
+name: Bunnyshell - Deploy Preview Environment
+on:
+  workflow_run:
+    workflows:
+      - "Bunnyshell - Prepare Preview Environment Configuration"
+    types:
+      - completed
+permissions:
+  pull-requests: write
+jobs:
+  load-artifact-from-reusable:
+    name: Load artifact values
+    uses: bunnyshell/workflows/.github/workflows/load-artifact.yaml@v2
+    with:
+      workflow_run_id: ${{ github.event.workflow_run.id }}
+
+  deploy:
+    name: Deploy Environment
+    needs: load-artifact-from-reusable
+    uses: bunnyshell/workflows/.github/workflows/deploy-env.yaml@v2
+    concurrency: bns-deploy-${{ needs.load-artifact-from-reusable.outputs.pr-number }}
+    if: ${{ github.event.workflow_run.conclusion == 'success' && needs.load-artifact-from-reusable.outputs.skip-deployment == 'false' }}
+    with:
+      pr-number: ${{ needs.load-artifact-from-reusable.outputs.pr-number }}
+      project-id: "q6aM9d4aKQ"
+      cluster-id: "JBNjaBJMyE"
+      env-name: "Demo PR #${{ needs.load-artifact-from-reusable.outputs.pr-number }}"
+      bunnyshell-yaml-contents: "kind: Environment\nname: preview\ntype: primary\nurlHandle: a1bbb3\ncomponents:\n  -\n    kind: Database\n    name: database\n    dockerCompose:\n      command:\n        - '--auth'\n      environment:\n        MONGO_INITDB_ROOT_PASSWORD: example\n        MONGO_INITDB_ROOT_USERNAME: root\n      image: mongo\n      restart: always\n      ports:\n        - '27017:27017'\n  -\n    kind: Application\n    name: web\n    gitRepo: 'https://github.com/K2VIIN/personal-avans-devops-2324-kevinkatja.git'\n    gitBranch: main\n    gitApplicationPath: /\n    dockerCompose:\n      build:\n        context: .\n        dockerfile: dockerfile\n      environment:\n        MONGO_URL: 'mongodb://root:example@mydatabase:27017/'\n      ports:\n        - '3000:3000'\n    hosts:\n      -\n        hostname: 'web-{{ env.base_domain }}'\n        path: /\n        servicePort: 3000\n"
+      comment-on-pr: true
+    secrets:
+      bunnyshell-access-token: ${{ secrets.BUNNYSHELL_ACCESS_TOKEN }}

@@ -1,28 +1,76 @@
 version: '1'
-
 services:
-  database:
+  mongodb:
     image: mongo
-    container_name: mydatabase
+    container_name: mongodb
     command: --auth
     restart: always
     environment:
       - MONGO_INITDB_ROOT_USERNAME=root
-      - MONGO_INITDB_ROOT_PASSWORD=example
+      - MONGO_INITDB_ROOT_PASSWORD=password
     volumes:
       - ./data:/data/db
     expose:
-      - "27017"
-
-  web:
-    build:
+      - 27017
+  web: 
+    build: 
       context: .
       dockerfile: dockerfile
     ports:
-      - "3000:3000"
+      - '3000:3000'
     environment:
-      - MONGO_URL=mongodb://root:example@mydatabase:27017/
+      - MONGO_URL=mongodb://root:password@mongodb:27017/
     depends_on:
-      - database
+      - mongodb
+  messagebus:
+    image: rabbitmq:latest
+    container_name: messagebus
+    hostname: "messagebus"
+    labels:
+      NAME: "messagebus"
+    ports:
+      - "4369:4369"
+      - "5671:5671"
+      - "5672:5672"
+      - "25672:25672"
+      - "15671:15671"
+      - "15672:15672"
 
+  db-exporter:
+    image: bitnami/mongodb-exporter:latest
+    container_name: db-exporter
+    environment:
+      - MONGO_URL=mongodb://root:password@mongodb:27017/
+    ports:
+      - "9216:9216"
+      - "17001:17001"
+    depends_on:
+      - mongodb
+    command: --mongodb.uri=$MONGO_URL
 
+  prometheus:
+    image: prom/prometheus:latest
+    volumes:
+      - ./prometheus:/etc/prometheus
+      - prometheus-data:/prometheus
+    ports:
+      - 9090:9090
+    command: --web.enable-lifecycle --config.file=/etc/prometheus/prometheus.yml
+  grafana:
+    build: ./grafana
+    ports:
+      - "5000:3000"
+
+  alertmanager:
+    image: prom/alertmanager:latest
+    restart: unless-stopped
+    container_name: alertmgr
+    ports:
+      - "9093:9093"
+    volumes:
+      - "./alertmanager:/config"
+      - alertmanager-data:/data
+    command: --config.file=/config/alertmanager.yml --log.level=debug
+volumes:
+  prometheus-data:
+  alertmanager-data:

@@ -1,0 +1,37 @@
+kind: Environment
+name: preview
+type: primary
+urlHandle: a1bbb3
+components:
+  -
+    kind: Database
+    name: database
+    dockerCompose:
+      command:
+        - '--auth'
+      environment:
+        MONGO_INITDB_ROOT_PASSWORD: example
+        MONGO_INITDB_ROOT_USERNAME: root
+      image: mongo
+      restart: always
+      ports:
+        - '27017:27017'
+  -
+    kind: Application
+    name: web
+    gitRepo: 'https://github.com/K2VIIN/personal-avans-devops-2324-kevinkatja.git'
+    gitBranch: main
+    gitApplicationPath: /
+    dockerCompose:
+      build:
+        context: .
+        dockerfile: dockerfile
+      environment:
+        MONGO_URL: 'mongodb://root:example@mydatabase:27017/'
+      ports:
+        - '3000:3000'
+    hosts:
+      -
+        hostname: 'web-{{ env.base_domain }}'
+        path: /
+        servicePort: 3000
